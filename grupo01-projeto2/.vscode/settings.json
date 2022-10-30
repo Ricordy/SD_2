@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "inet.h": "c",
+        "message-private.h": "c"
+    }
+}
