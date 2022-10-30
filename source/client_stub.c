@@ -9,6 +9,8 @@
 #include "entry.h"
 #include "sdmessage.pb-c.h"
 #include <sys/socket.h>
+#include <string.h>
+#include <stdlib.h>
 
 
 /* Função para estabelecer uma associação entre o cliente e o servidor, 
