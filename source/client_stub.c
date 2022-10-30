@@ -63,6 +63,34 @@ int rtree_disconnect(struct rtree_t *rtree){
  * Devolve 0 (ok, em adição/substituição) ou -1 (problemas).
  */
 int rtree_put(struct rtree_t *rtree, struct entry_t *entry){
+struct message_t *msg = malloc(sizeof(struct message_t));
+   if(msg == NULL){
+     return -1;
+   }
+   struct _MessageT *msgGRANDE = malloc(sizeof(struct _MessageT));
+   if(msgGRANDE == NULL){
+     return -1;
+   }
+   message_t__init(msgGRANDE);
+   msg->msgConvert = msgGRANDE;
+   msg->msgConvert->opcode = MESSAGE_T__OPCODE__OP_PUT;
+   msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_ENTRY;
+   msg->msgConvert->data = entry->value->data;
+   msg->msgConvert->data_size = entry->value->datasize;
+   msg->msgConvert->key = entry->key;
+   msg = network_send_receive(rtree,msg);
+   if(msg->msgConvert->opcode == MESSAGE_T__OPCODE__OP_ERROR){
+     printf("Erro a inserir a entrada!\n");
+     message_t__free_unpacked(msg->msgConvert,NULL);
+     free(msg);
+     return -1;
+   }
+   free(msgGRANDE);
+   message_t__free_unpacked(msg->msgConvert,NULL);
+   free(msg);
+   
+   //printf("Entrada inserida com sucesso\n");
+   return 0;
     
 }
 
