@@ -117,12 +117,12 @@ struct data_t *rtree_get(struct rtree_t *rtree, char *key){
     }
     msg = network_send_receive(rtree,msg);
     if(msg->msgConvert->opcode == MESSAGE_T__OPCODE__OP_ERROR){
-        printf("Erro a obter elemento da tabela\n");
+        printf("Erro a obter elemento da arvore\n");
         message_t__free_unpacked(msg->msgConvert,NULL);
         free(msg);
         return NULL;
     }
-   //printf("Vitoria a obter elemento da tabela\n");
+   //printf("Vitoria a obter elemento da arvore\n");
    struct data_t *dataConvert = data_create2(msg->msgConvert->data_size,msg->msgConvert->data);
    msg->msgConvert->data = NULL;
    message_t__free_unpacked(msg->msgConvert,NULL);
@@ -154,7 +154,7 @@ int rtree_del(struct rtree_t *rtree, char *key){
     }
     msg = network_send_receive(rtree,msg);
     if(msg->msgConvert->opcode == MESSAGE_T__OPCODE__OP_ERROR){
-        printf("Erro a eliminar elemento da tabela\n");
+        printf("Erro a eliminar elemento da arvore\n");
         message_t__free_unpacked(msg->msgConvert,NULL);
         free(msg);
         return -1;
@@ -162,7 +162,7 @@ int rtree_del(struct rtree_t *rtree, char *key){
     message_t__free_unpacked(msg->msgConvert,NULL);
     free(msgGRANDE);
     free(msg);
-    //printf("Vitoria a eliminar elemento da tabela\n");
+    //printf("Vitoria a eliminar elemento da arvore\n");
     return 0;
 }
 
@@ -183,7 +183,7 @@ int rtree_size(struct rtree_t *rtree){
     msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_NONE;
     msg = network_send_receive(rtree,msg);
     if(msg->msgConvert->opcode == MESSAGE_T__OPCODE__OP_ERROR){
-        printf("Erro a obter numero de elementos da tabela\n");
+        printf("Erro a obter numero de elementos da arvore\n");
         message_t__free_unpacked(msg->msgConvert,NULL);
         free(msg);
         return -1;
@@ -192,13 +192,38 @@ int rtree_size(struct rtree_t *rtree){
     message_t__free_unpacked(msg->msgConvert,NULL);
     free(msgGRANDE);
     free(msg);
-    //printf("Vitoria a obter numero de elementos da tabela\n");
+    //printf("Vitoria a obter numero de elementos da arvore\n");
     return size;
 }
 
 /* Função que devolve a altura da árvore.
  */
 int rtree_height(struct rtree_t *rtree){
+    struct message_t *msg = malloc(sizeof(struct message_t));
+    if(msg == NULL){
+        return -1;
+    }
+    struct _MessageT *msgGRANDE = malloc(sizeof(struct _MessageT));
+    if(msgGRANDE == NULL){
+        return -1;
+    }
+    message_t__init(msgGRANDE);
+    msg->msgConvert = msgGRANDE;
+    msg->msgConvert->opcode = MESSAGE_T__OPCODE__OP_HEIGHT;
+    msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_NONE;
+    msg = network_send_receive(rtree,msg);
+    if(msg->msgConvert->opcode == MESSAGE_T__OPCODE__OP_ERROR){
+        printf("Erro a obter a altura da arvore\n");
+        message_t__free_unpacked(msg->msgConvert,NULL);
+        free(msg);
+        return -1;
+    } 
+    int size = msg->msgConvert->sizeofkeys;
+    message_t__free_unpacked(msg->msgConvert,NULL);
+    free(msgGRANDE);
+    free(msg);
+    //printf("Vitoria a obter numero de elementos da arvore\n");
+    return size;
     
 }
 
@@ -222,7 +247,7 @@ char **rtree_get_keys(struct rtree_t *rtree){
 
     msg = network_send_receive(rtree,msg);
     if(msg->msgConvert->opcode == MESSAGE_T__OPCODE__OP_ERROR){
-        printf("Erro a obter keys da tabela\n");
+        printf("Erro a obter keys da arvore\n");
         message_t__free_unpacked(msg->msgConvert,NULL);
         free(msgGRANDE);
         free(msg);
@@ -239,7 +264,33 @@ char **rtree_get_keys(struct rtree_t *rtree){
 /* Devolve um array de void* com a cópia de todas os values da árvore,
  * colocando um último elemento a NULL.
  */
-void **rtree_get_values(struct rtree_t *rtree);
+void **rtree_get_values(struct rtree_t *rtree){
+    struct message_t *msg = malloc(sizeof(struct message_t));
+    if(msg == NULL){
+        return NULL;
+    }
+    struct _MessageT *msgGRANDE = malloc(sizeof(struct _MessageT));
+    if(msgGRANDE == NULL){
+        free(msg);
+        return NULL;
+    }
+    message_t__init(msgGRANDE);
+    msg->msgConvert = msgGRANDE;
+    msg->msgConvert->opcode = MESSAGE_T__OPCODE__OP_GETVALUES;
+    msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_VALUES;
 
-
-
+    msg = network_send_receive(rtree,msg);
+    if(msg->msgConvert->opcode == MESSAGE_T__OPCODE__OP_ERROR){
+        printf("Erro a obter keys da arvore\n");
+        message_t__free_unpacked(msg->msgConvert,NULL);
+        free(msgGRANDE);
+        free(msg);
+        return NULL;
+    }
+    char **values = msg->msgConvert->values;
+    msg->msgConvert->values = NULL;
+    message_t__free_unpacked(msg->msgConvert,NULL);
+    free(msgGRANDE);
+    free(msg);
+    return values;
+}
