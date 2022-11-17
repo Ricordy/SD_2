@@ -1,8 +1,15 @@
-#ifndef _TREE_SKEL_H
-#define _TREE_SKEL_H
-
 #include "sdmessage.pb-c.h"
+#include "tree_skel.h"
 #include "tree.h"
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+
 
 struct tree_t *tree; 
 
@@ -38,7 +45,7 @@ int invoke(struct message_t *msg){
     //size
     msg->msgConvert->opcode +=1;
     msg->msgConvert->c_type = MESSAGE_T__OPCODE__OP_SIZE;
-    msg->msgConvert->sizeofkeys = tree_size(tree);
+    msg->msgConvert->data.data = tree_size(tree);
     return 0;
   }else if(operacao == MESSAGE_T__OPCODE__OP_DEL){
     //################################################
@@ -46,12 +53,12 @@ int invoke(struct message_t *msg){
     msg->msgConvert->opcode +=1;
     msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_NONE;
     if(conteudo == MESSAGE_T__C_TYPE__CT_KEY ){
-      if(tree_del(tree,msg->msgConvert->key)==-1){
+      if(tree_del(tree,msg->msgConvert->data.data)==-1){
         msg->msgConvert->opcode = MESSAGE_T__OPCODE__OP_ERROR;
         return -1;
       }
     }else if(conteudo == MESSAGE_T__C_TYPE__CT_ENTRY){
-      if(tree_del(tree,msg->msgConvert->key)==-1){
+      if(tree_del(tree,msg->msgConvert->data.data)==-1){
         msg->msgConvert->opcode = MESSAGE_T__OPCODE__OP_ERROR;
         return -1;
       }
@@ -67,11 +74,11 @@ int invoke(struct message_t *msg){
      msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_VALUE;
      struct data_t *dataReceived;
      if(conteudo == MESSAGE_T__C_TYPE__CT_KEY ){
-       if((dataReceived = tree_get(tree,msg->msgConvert->key))!=NULL){
-        free(msg->msgConvert->key);
-        msg->msgConvert->key = NULL;
-        msg->msgConvert->data = dataReceived->data;
-        msg->msgConvert->data_size = dataReceived->datasize;
+       if((dataReceived = tree_get(tree,msg->msgConvert->data.data))!=NULL){
+        free(msg->msgConvert->data.len);
+        msg->msgConvert->data.data = NULL;
+        msg->msgConvert->data.data = dataReceived->data;
+        msg->msgConvert->data.len = dataReceived->datasize;
         free(dataReceived);
         return 0;
        }
@@ -79,10 +86,10 @@ int invoke(struct message_t *msg){
        free(dataReceived);
        return 0;
      }else if(conteudo == MESSAGE_T__C_TYPE__CT_ENTRY){
-       if((dataReceived = tree_get(tree,msg->msgConvert->key))!=NULL){
-        free(msg->msgConvert->key);
-        msg->msgConvert->data = dataReceived->data;
-        msg->msgConvert->data_size = dataReceived->datasize;
+       if((dataReceived = tree_get(tree,msg->msgConvert->data.data))!=NULL){
+        free(msg->msgConvert->data.data);
+        msg->msgConvert->data.data = dataReceived->data;
+        msg->msgConvert->data.len = dataReceived->datasize;
         free(dataReceived);
         return 0;
        }
@@ -100,8 +107,8 @@ int invoke(struct message_t *msg){
     //put
     msg->msgConvert->opcode +=1;
     msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_NONE;
-    struct data_t *dataColocar = data_create2(msg->msgConvert->data_size,msg->msgConvert->data);
-    if((tree_put(tree,msg->msgConvert->key,dataColocar))==-1){
+    struct data_t *dataColocar = data_create2(msg->msgConvert->data.len,msg->msgConvert->data.data);
+    if((tree_put(tree,msg->msgConvert->data.data,dataColocar))==-1){
       free(dataColocar);
       msg->msgConvert->opcode = MESSAGE_T__OPCODE__OP_ERROR;
       return -1;
@@ -120,8 +127,8 @@ int invoke(struct message_t *msg){
       msg->msgConvert->c_type = MESSAGE_T__C_TYPE__CT_NONE;
       return -1;
     }
-    msg->msgConvert->keys = keys;
-    msg->msgConvert->n_keys = tree_size(tree);
+    msg->msgConvert->data.data = keys;
+    //msg->msgConvert->data.len = tree_size(tree);
     return 0;
     
 
@@ -129,4 +136,3 @@ int invoke(struct message_t *msg){
   return 0;
 }
 
-#endif

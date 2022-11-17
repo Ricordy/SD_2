@@ -1,5 +1,11 @@
 {
     "files.associations": {
-        "protobuf-c.h": "c"
-    }
+        "protobuf-c.h": "c",
+        "message-private.h": "c",
+        "socket.h": "c",
+        "types.h": "c",
+        "unistd.h": "c",
+        "in.h": "c"
+    },
+    "cmake.configureOnOpen": false
 }

@@ -89,16 +89,21 @@ int tree_put(struct tree_t *tree, char *key, struct data_t *value){
         // Se o proximo for null, cria um novo no da arvore
         if(tree->left == NULL){
             tree->left = tree_create();
+            return -1;
         }
         tree_put(tree->left, key, value);
+        return 0;
     } //Se for maior
     else if(key > tree->root->key){
         // Se o proximo for null, cria um novo no da arvore
         if(tree->right == NULL){
             tree->right = tree_create();
+            return -1;
         }
         tree_put(tree->right, key, value);
+        return 0;
     }
+    return -1;
 
 }
 

@@ -29,3 +29,4 @@ struct message_t *network_send_receive(struct rtree_t * rtree, struct message_t 
  */
 int network_close(struct rtree_t * rtree);
 
+#endif

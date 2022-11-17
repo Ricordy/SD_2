@@ -1,8 +1,17 @@
-#ifndef _NETWORK_CLIENT_H
-#define _NETWORK_CLIENT_H
 
-#include "client_stub.h"
+//#include "client_stub.h"
 #include "sdmessage.pb-c.h"
+#include "message-private.h"
+#include "client_stub-private.h"
+#include "network_client.h"
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
 
 /* Esta função deve:
  * - Obter o endereço do servidor (struct sockaddr_in) a base da
@@ -13,7 +22,7 @@
  * - Retornar 0 (OK) ou -1 (erro).
  */
 int network_connect(struct rtree_t *rtree){
-    if((connect(rtable->socket,(struct sockaddr *)&(rtree->server), sizeof(rtree->server)))<0){
+    if((connect(rtree->socket,(struct sockaddr *)&(rtree->server), sizeof(rtree->server)))<0){
         perror("Erro ao conectar ao servidor");
         close(rtree->socket);
         return -1;
@@ -35,7 +44,7 @@ struct message_t *network_send_receive(struct rtree_t * rtree, struct message_t 
 
     int len;
     uint8_t *buf = NULL;
-    len = message_t__getpacked_size(msg->msgConvert);
+    len = message_t__get_packed_size(msg->msgConvert);
     buf = malloc(len);
     if(buf == NULL){
         return NULL;
@@ -49,7 +58,7 @@ struct message_t *network_send_receive(struct rtree_t * rtree, struct message_t 
         return NULL;
     }
 
-    message_t__pack(msg-msgConvert, buf);
+    message_t__pack(msg->msgConvert, buf);
     int nbytes;
     if((nbytes = write_all(socket,buf,len)) != len){
         perror("Erro ao enviar dados ao servidor");
@@ -58,7 +67,7 @@ struct message_t *network_send_receive(struct rtree_t * rtree, struct message_t 
     }
     free(buf);
 
-    unit32_t sizeAntes;
+    uint32_t sizeAntes;
     read_all(socket,&sizeAntes,sizeof(int));
     if(sizeAntes <= 0){
         printf("Erro a receber!");

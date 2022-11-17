@@ -1,16 +1,27 @@
-#ifndef _NETWORK_SERVER_H
-#define _NETWORK_SERVER_H
-
 #include <signal.h>
 #include "network_server.h"
-#include "inet.h"
 #include "message-private.h"
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <poll.h>
+//tamanho maximo da mensagem enviada pelo cliente
+#define MAX_MSG 2048
+#define NFDESC 1000 // N�mero de sockets (uma para listening)
+#define TIMEOUT 50 // em milisegundos
 
 //socket inicial
+struct pollfd connections[NFDESC];
 int sockfd;
 struct sockaddr_in server,client;
 char str[MAX_MSG+1];
-int nbytes, count;
+int nbytes, count, nfds, kfds, i;
 socklen_t size_client;
 
 /* Função para preparar uma socket de receção de pedidos de ligação
@@ -58,51 +69,88 @@ int network_server_init(short port){
  * - Enviar a resposta ao cliente usando a função network_send.
  */
 int network_main_loop(int listening_socket){
-  int connsockfd;
   struct message_t *msg;
 
+  size_client = sizeof(struct sockaddr);
+  for (i = 0; i < NFDESC; i++)
+    connections[i].fd = -1;
 
-  while((connsockfd = accept(listening_socket,(struct sockaddr *)&client, &size_client))>0){
-    printf("Recebeu cliente!\n");
-    if(connsockfd==-1){
-      perror("Error no accept!\n");
-      return -1;
+  connections[0].fd = listening_socket; //Listening welcome socket
+  connections[0].events = POLLIN;
+
+  nfds = 1;
+
+  while((kfds = poll(connections, nfds, 10)) >= 0){
+    if(kfds > 0){
+      if((connections[0].revents & POLLIN) && (nfds < NFDESC)){
+        if ((connections[nfds].fd = accept(connections[0].fd, (struct sockaddr *) &client, &size_client)) > 0){ // Liga��o feita ?
+          printf("Recebeu cliente!\n");
+          connections[nfds].events = POLLIN; // Vamos esperar dados nesta socket
+          nfds++;
+        }
+      }
+      for (i = 1; i < nfds; i++){
+        if (connections[i].revents & POLLIN){
+
+          msg = network_receive(connections[i].fd);
+          if(msg == NULL){
+            close(connections[i].fd);
+            connections[i].fd = -1;
+            int index;
+            for(int j = 1; j<nfds; j++){
+              if(connections[j].fd == -1){
+                index = j;
+              }
+            }
+            while(index<nfds){
+              connections[index].fd = connections[index+1].fd;
+              index++;
+            }
+            nfds--;
+            printf("Cliente desconectado!\n");
+          }else{
+            int inv = invoke(msg);
+            if(inv == -1){
+              message_t__free_unpacked(msg->msgConvert,NULL);
+              free(msg);
+              close(connections[i].fd);
+              connections[i].fd = -1;
+              nfds--;
+              printf("Erro invoke!\n");
+              continue;
+            }
+            msg->msgConvert->op_number = inv;
+            if((network_send(connections[i].fd,msg)==-1)){
+              message_t__free_unpacked(msg->msgConvert,NULL);
+              free(msg);
+              close(connections[i].fd);
+              connections[i].fd = -1;
+              nfds--;
+              printf("Erro a enviar mensagem!\n");
+              continue; 
+            }else{
+              printf("Mensagem enviada!\n");
+            }
+          }
+        }
+        if((connections[i].revents & POLLHUP)||(connections[i].revents & POLLERR)){
+          message_t__free_unpacked(msg->msgConvert,NULL);
+          free(msg);
+          close(connections[i].fd);
+          connections[i].fd = -1;
+          nfds--;
+          printf("Erro a receber mensagem!\n");
+          continue;
+        }  
+      }
     }
-
-    while(1){
-      msg = network_receive(connsockfd);
-      if(msg == NULL){
-        message_t__free_unpacked(msg->msgConvert,NULL);
-        free(msg);
-        close(connsockfd);
-        printf("Erro a receber mensagem!\n");
-        break;
-      }
-      int inv = invoke(msg);
-      if(inv == -1){
-        message_t__free_unpacked(msg->msgConvert,NULL);
-        free(msg);
-        close(connsockfd);
-        printf("Erro invoke!\n");
-        break;
-      }
-      if((network_send(connsockfd,msg)==-1)){
-        message_t__free_unpacked(msg->msgConvert,NULL);
-        free(msg);
-        close(connsockfd);
-        printf("Erro a enviar mensagem!\n");
-        break; 
-      }else{
-        printf("Mensagem enviada!\n");
-      }
-      
-    }
-
   }
-  message_t__free_unpacked(msg->msgConvert,NULL);
+
+
+  
   free(msg->msgConvert);
   free(msg);
-  close(connsockfd);
+  close(listening_socket);
   return 0;
 }
 
@@ -137,7 +185,7 @@ struct message_t *network_receive(int client_socket){
     free(msgRecebida);
     return NULL;
   }
-  msgRecebida->msgConvert = malloc(sizeof(struct _MessageT));
+  msgRecebida->msgConvert = malloc(sizeof(struct MessageT));
   if(msgRecebida->msgConvert == NULL){
     free(buf);
     message_t__free_unpacked(msgRecebida->msgConvert,NULL);

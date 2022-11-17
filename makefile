@@ -8,7 +8,7 @@ BIN = binary
 LIB = lib
 
 out:
-	make data.o sdmessage entry.o tree.o message.o client_stub.o network_client.o  
+	make data.o sdmessage entry.o tree.o message.o network_client.o network_server.o tree_skel.o
 
 data.o: $(SRC)/data.c $(INCLUDE)/data.h
 	$(CC) -c $(CFLAGS) $(SRC)/data.c -o $(OBJ)/data.o
@@ -22,8 +22,8 @@ entry.o: $(SRC)/entry.c $(INCLUDE)/data.h $(INCLUDE)/entry.h
 tree.o: $(SRC)/tree.c $(INCLUDE)/data.h $(INCLUDE)/entry.h $(INCLUDE)/tree.h $(INCLUDE)/tree-private.h
 	$(CC) -c $(CFLAGS) $(SRC)/tree.c -o $(OBJ)/tree.o
 
-tree_skel.o: $(SRC)/tree_skel.c  $(INCLUDE)/tree.h $(INCLUDE)/sdmessage.pb-c.h
-	$(CC) -c $(CFLAGS) $(SRC)/tree_skel.c -o $(OBJ)/tree_skel.o
+tree_skel.o: $(SRC)/tree-skel.c  $(INCLUDE)/tree.h $(INCLUDE)/sdmessage.pb-c.h
+	$(CC) -c $(CFLAGS) $(SRC)/tree-skel.c -o $(OBJ)/tree-skel.o
 
 sdmessage: 
 	protoc --c_out=. sdmessage.proto
@@ -34,10 +34,10 @@ sdmessage:
 client_stub.o: $(SRC)/client_stub.c  $(INCLUDE)/data.h $(INCLUDE)/entry.h $(INCLUDE)/entry.h $(INCLUDE)/sdmessage.pb-c.h
 	$(CC) -c $(CFLAGS) $(SRC)/client_stub.c -o $(OBJ)/client_stub.o
 
-network_client.o: $(SRC)/network_client.c $(INCLUDE)/network_client.h $(INCLUDE)/inet.h $(INCLUDE)/client_stub_private.h $(INCLUDE)/message-private.h
+network_client.o: $(SRC)/network_client.c $(INCLUDE)/network_client.h 
 	$(CC) -c $(CFLAGS) $(SRC)/network_client.c -o $(OBJ)/network_client.o
 
-network_server.o: $(SRC)/network_server.c $(INCLUDE)/network_server.h $(INCLUDE)/inet.h $(INCLUDE)/message-private.h
+network_server.o: $(SRC)/network_server.c $(INCLUDE)/network_server.h $(INCLUDE)/message-private.h
 	$(CC) -c $(CFLAGS) $(SRC)/network_server.c -o $(OBJ)/network_server.o
 
 message.o: $(SRC)/message.c $(INCLUDE)/message-private.h 
